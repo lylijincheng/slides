@@ -1,0 +1,285 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Gallery</title>
+
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
+
+    <link rel="stylesheet" href="http://necolas.github.io/normalize.css/latest/normalize.css">
+    <style>
+        ul, li {
+            margin: 0;
+            padding: 0;
+        }
+
+        ul {
+            list-style-type: none;
+        }
+
+        .slides {
+            /*overflow: hidden;*/
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: -moz-box;
+            display: -o-box;
+            display: flex;
+
+            -webkit-backface-visibility: hidden;
+            -webkit-transform-style: preserve-3d;
+            -webkit-transform: translate3d(0, 0, 0);
+
+            -webkit-user-select: none;
+            -webkit-user-drag: none;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        }
+
+        .slides > .slide {
+            -webkit-flex: 0 0 auto;
+            -ms-flex: 0 0 auto;
+            -moz-flex: 0 0 auto;
+            -o-flex: 0 0 auto;
+            flex: 0 0 auto;
+
+            -webkit-transform-style: preserve-3d;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="container">
+        <ul class="slides">
+            <li class="slide"><img src="images/lorempixel1.jpg"></li>
+            <li class="slide"><img src="images/lorempixel2.jpg"></li>
+            <li class="slide"><img src="images/lorempixel3.jpg"></li>
+            <li class="slide"><img src="images/lorempixel4.jpg"></li>
+            <li class="slide"><img src="images/lorempixel5.jpg"></li>
+            <li class="slide"><img src="images/lorempixel6.jpg"></li>
+        </ul>
+    </div>
+
+    <script>
+
+    // Events.
+    var hasPointerSupport = navigator.pointerEnabled || navigator.msPointerEnabled;
+
+    var _EVT_DOWN = 'ontouchstart' in window ? 'touchstart' : hasPointerSupport ? 'MSPointerDown' : 'mousedown';
+    var _EVT_MOVE = 'ontouchmove'  in window ? 'touchmove'  : hasPointerSupport ? 'MSPointerMove' : 'mousemove';
+    var _EVT_UP   = 'ontouchend'   in window ? 'touchend'   : hasPointerSupport ? 'MSPointerUp'   : 'mouseup';
+
+    // Vendor detection
+    var vendorStyle = function(style) {
+        var i, len, vendors, blank, camel;
+
+        vendors = ['webkit', 'ms', 'Moz', 'O'];
+        blank = document.createElement('div').style;
+
+        if (style in blank) {
+            vendorStyle['css-' + style] = style;
+            return style;
+        }
+
+        camel = style.charAt(0).toUpperCase() + style.slice(1);
+        for (i = 0, len = vendors.length; i < len; i += 1) {
+            prefixStyle = vendors[i] + camel;
+
+            if (prefixStyle in blank) {
+                vendorStyle['css-' + style] = '-' + vendors[i].toLowerCase() + '-' + style;
+                return prefixStyle;
+            }
+        }
+
+        return style;
+    };
+
+    // Property names with vendor prefix.
+    var transitionPropertyName, transitionStyleName, transformPropertyName, transformStyleName;
+
+    transitionStyleName = vendorStyle('transition');
+    transformStyleName  = vendorStyle('transform');
+
+    transitionPropertyName = vendorStyle['css-transition'];
+    transformPropertyName  = vendorStyle['css-transform'];
+
+    var slice = [].slice;
+
+    var bind = function(fn, scope) {
+        var context, args
+
+        context = scope || this;
+        args = slice.call(arguments, 2);
+
+        return fn.bind ? fn.bind(context) : function() {
+            return fn.apply(context, slice.call(arguments).concat(args));
+        };
+    };
+
+    // Gallery constructor.
+    function Gallery() {
+        this.initialize.apply(this, arguments);
+    }
+
+    Gallery.prototype.initialize = function(el, onslide, deviceWidth) {
+        this.el = el;
+        this.slides = this.el.querySelectorAll('.slide');
+
+        this.onslide = onslide;
+        this.deviceWidth = deviceWidth || window.innerWidth;
+
+        this.currentIndex = 0;
+        this.endTranslation = 0;
+        this.setDimension();
+        this.listenEvents();
+    };
+
+    Gallery.prototype.setDimension = function() {
+        slice.call(this.slides).forEach(function(slide, index) {
+            slide.style.width = this.deviceWidth + 'px';
+        }, this);
+
+        this.el.style.width = this.deviceWidth * this.getElementLength() + 'px';
+    };
+
+    Gallery.prototype.listenEvents = function() {
+
+        this.el.addEventListener(_EVT_DOWN, this, false);
+        this.el.addEventListener(_EVT_MOVE, this, false);
+        this.el.addEventListener(_EVT_UP,   this, false);
+
+        this.el.addEventListener('resize', this, false);
+        this.el.addEventListener('orientationchange', this, false);
+    };
+
+    Gallery.prototype.handleEvent = function(e) {
+        // e.preventDefault();
+
+        e = e.originalEvent || e;
+
+        e.currentX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+        e.currentY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+
+        switch(e.type) {
+
+            case _EVT_DOWN:
+                return this.handleDown(e);
+
+            case _EVT_MOVE:
+                return this.handleMove(e);
+
+            case _EVT_UP:
+                return this.handleUp(e);
+
+            case 'resize':
+            case 'orientationchange':
+                return this.handleResize(e);
+        }
+    };
+
+    Gallery.prototype.handleDown = function(e) {
+        this.startX = e.currentX;
+        this.startY = e.currentY;
+
+        this.disableTransition();
+    };
+
+    Gallery.prototype.handleMove = function(e) {
+        var direction;
+
+        this.endX = e.currentX;
+        this.endY = e.currentY;
+
+        direction = this.getDirection(this.endX,this.endY, this.startX,this.startY);
+        if (direction === "LEFT" || direction === "RIGHT") {
+            e.preventDefault();
+            this.translate(this.endTranslation + this.endX - this.startX);
+        }
+    };
+
+    Gallery.prototype.handleUp = function(e) {
+        var maxIndex, translation, currentIndex;
+
+        maxIndex     = this.getElementLength() - 1;
+        translation  = this.getNextIndex(e) * this.deviceWidth;
+        currentIndex = this.currentIndex;
+
+        this.enableTransition();
+        this.setEndTranslation( currentIndex < 0 ? 0 : (currentIndex > maxIndex) ? (-this.deviceWidth * maxIndex) : (-translation) );
+
+        /* Callback: onslide */
+        if (this.onslide && currentIndex >= 0 && currentIndex <= maxIndex) {
+            setTimeout(bind(this.onslide, this), 3e2);
+        }
+        /* Callback: onslide end */
+    };
+
+    Gallery.prototype.handleResize = function(e) {
+        this.deviceWidth = window.innerWidth;
+        this.setDimension();
+        this.setEndTranslation(-(this.currentIndex || 0) * this.deviceWidth);
+    };
+
+    Gallery.prototype.getNextIndex = function(e) {
+        var direction = this.getDirection(this.endX,this.endY, this.startX,this.startY);
+        return this.currentIndex = this.getTouchedIndex(e) + (direction === "LEFT" ? 1 : direction === 'RIGHT' ? -1 : 0);
+    };
+
+    Gallery.prototype.getTouchedIndex = function(e) {
+        var target, i, len;
+
+        target = e.target;
+        while (!/\bslide\b/.test(target.className)) {
+            target = target.parentNode;
+        }
+
+        len = this.slides.length;
+        for (i = 0; i < len; i += 1) {
+            if (this.slides[i] === target) {
+                return i;
+            }
+        }
+
+        return 0;
+    };
+
+    Gallery.prototype.getTranslate = function() {
+        var transform = this.el.style[transformStyleName];
+        return parseInt(transform.slice(12, transform.indexOf(',')), 10) || 0;
+    };
+
+    Gallery.prototype.setEndTranslation = function(translation) {
+        this.translate(translation);
+        this.endTranslation = translation;
+    };
+
+    Gallery.prototype.translate = function(x) {
+        this.el.style[transformStyleName] = 'translate3d(' + x + 'px, 0, 0)';
+    };
+
+    Gallery.prototype.disableTransition = function() {
+        this.el.style[transitionPropertyName] = 'none';
+    };
+
+    Gallery.prototype.enableTransition = function() {
+        this.el.style[transitionPropertyName] = transformPropertyName + ' .3s ease';
+    };
+
+    Gallery.prototype.getElementLength = function() {
+        return this.el.querySelectorAll('.slide').length;
+    };
+
+    Gallery.prototype.getDirection = function(x2,y2, x1,y1) {
+        return this.direction = Math.abs(x1 - x2) >= Math.abs(y1 - y2) ? (x1 > x2 ? 'LEFT' : 'RIGHT') : (y1 > y2 ? 'UP' : 'DOWN');
+    };
+
+
+
+    new Gallery(document.querySelector('.slides'), onslide, 320);
+
+    function onslide() {
+        console.log(this, arguments);
+    }
+
+    </script>
+</body>
+</html>
