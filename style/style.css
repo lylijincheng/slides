@@ -1,0 +1,35 @@
+ul, li {
+    margin: 0;
+    padding: 0;
+}
+
+ul {
+    list-style-type: none;
+}
+
+.slides {
+    /*overflow: hidden;*/
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: -moz-box;
+    display: -o-box;
+    display: flex;
+
+    -webkit-backface-visibility: hidden;
+    -webkit-transform-style: preserve-3d;
+    -webkit-transform: translate3d(0, 0, 0);
+
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+.slides > .slide {
+    -webkit-flex: 0 0 auto;
+    -ms-flex: 0 0 auto;
+    -moz-flex: 0 0 auto;
+    -o-flex: 0 0 auto;
+    flex: 0 0 auto;
+
+    -webkit-transform-style: preserve-3d;
+}
