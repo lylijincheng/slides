@@ -17,7 +17,7 @@ Gallery.prototype.initialize = function(el, onslide, deviceWidth) {
 };
 
 Gallery.prototype.setDimension = function() {
-    slice.call(this.slides).forEach(function(slide, index) {
+    [].slice.call(this.slides).forEach(function(slide, index) {
         slide.style.width = this.deviceWidth + 'px';
     }, this);
 
